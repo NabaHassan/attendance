@@ -103,10 +103,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 _employeeNameController.text.trim(),
               );
             }
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
               Navigator.pushReplacementNamed(context, '/attendance');
             });
-
           }
 
           if (state is AuthError) {
@@ -122,7 +121,6 @@ class _LoginScreenState extends State<LoginScreen> {
         },
 
         builder: (context, state) {
-          
           if (state is AuthLoading) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -398,10 +396,16 @@ class _LoginScreenState extends State<LoginScreen> {
                                           context,
                                         ).showSnackBar(
                                           SnackBar(
+                                            duration: const Duration(
+                                              seconds: 1,
+                                            ),
                                             content: Text(
-                                              'Google sign-in not implemented',
+                                              'Logging in From Google...',
                                             ),
                                           ),
+                                        );
+                                        context.read<AuthBloc>().add(
+                                          GoogleSignInRequested(),
                                         );
                                       },
                                       icon: Icon(

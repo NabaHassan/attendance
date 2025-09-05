@@ -1,8 +1,10 @@
 import 'package:attendance/models/user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 
 class AuthRepository {
   final FirebaseAuth _firebaseAuth;
@@ -11,6 +13,8 @@ class AuthRepository {
 
   AuthRepository({FirebaseAuth? firebaseAuth})
     : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
+final GoogleSignIn googleSignIn = GoogleSignIn();
+    
 
   // login
   Future<User?> signIn({
@@ -28,10 +32,55 @@ class AuthRepository {
     }
   }
 
+
+
+//method to signin using google 
+  Future<User?> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleSignInAccount = await googleSignIn
+          .signIn();
+      if (googleSignInAccount == null) return null;
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleSignInAccount.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+        accessToken: googleAuth.accessToken,
+      );
+
+      final userCredential = await _firebaseAuth.signInWithCredential(
+        credential,
+      );
+      return userCredential.user; // return Firebase user
+    } catch (e) {
+      return null;
+    }
+  }
+
+
+  
+
+
+
+
+
+
   // logout
   Future<void> signOut() async {
-    await _firebaseAuth.signOut();
+    try {
+      // Firebase sign out
+      await _firebaseAuth.signOut();
+
+      // Google sign out (if logged in with Google)
+      if (await googleSignIn.isSignedIn()) {
+        await googleSignIn.signOut();
+      }
+    } catch (e) {
+      return null;
+    }
   }
+
 
   // register
   Future<User?> signUp({

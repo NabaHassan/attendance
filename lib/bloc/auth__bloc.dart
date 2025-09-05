@@ -11,6 +11,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   AuthBloc({required this.authRepository}) : super(AuthInitial()) {
     on<SignInRequested>(_onSignInRequested);
+    on<GoogleSignInRequested>(_onGoogleSignInRequested);
+
     on<SignUpRequested>(_onSignUpRequested);
     on<SignOutRequested>(_onSignOutRequested);
   }
@@ -26,7 +28,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         password: event.password,
       );
 
-
       final emailVerified = await authRepository.isEmailVerified();
 
       if (!emailVerified) {
@@ -38,7 +39,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthError("Invalid credentials or user not found"));
         return;
       }
-
 
       // Optionally fetch the UserModel from Firestore if needed
       final uid = user.uid;
@@ -53,6 +53,36 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthError(e.toString()));
     }
   }
+
+  Future<void> _onGoogleSignInRequested(
+    GoogleSignInRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      // Sign in with Google → get user
+      final user = await authRepository.signInWithGoogle();
+
+      if (user == null) {
+        emit(AuthError("Google sign-in failed or was cancelled"));
+        return;
+      }
+
+      // Optionally fetch Firestore profile
+      final userModel = await authRepository.getUserModel(user.uid);
+
+      if (userModel != null) {
+        emit(Authenticated(userModel));
+      } else {
+        emit(AuthError("User profile not found in Firestore"));
+      }
+    } on FirebaseAuthException catch (e) {
+      emit(AuthError(e.message ?? "Authentication failed"));
+    } catch (e) {
+      emit(AuthError("Unexpected error: $e"));
+    }
+  }
+
 
   Future<void> _onSignUpRequested(
     SignUpRequested event,

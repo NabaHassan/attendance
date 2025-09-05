@@ -97,7 +97,6 @@ class _AuthCheckState extends State<AuthCheck> {
 
   void _getCurrentUser() async {
     sharedPreferences = await SharedPreferences.getInstance();
-    print("Employee Id: ${sharedPreferences.getString('employeeId')}");
     try {
       if (sharedPreferences.getString('employeeEmail') != null && sharedPreferences.getString('employeeId') != null) {
         setState(() {
