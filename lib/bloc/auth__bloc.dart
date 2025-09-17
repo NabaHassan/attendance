@@ -12,9 +12,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({required this.authRepository}) : super(AuthInitial()) {
     on<SignInRequested>(_onSignInRequested);
     on<GoogleSignInRequested>(_onGoogleSignInRequested);
-
+    on<AppStarted>(_onAppStarted);
     on<SignUpRequested>(_onSignUpRequested);
     on<SignOutRequested>(_onSignOutRequested);
+  }
+
+  Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      final userModel = await authRepository.getUserModel(user.uid);
+      if (userModel != null) {
+        emit(Authenticated(userModel));
+      } else {
+        emit(Unauthenticated());
+      }
+    } else {
+      emit(Unauthenticated());
+    }
   }
 
   Future<void> _onSignInRequested(
@@ -47,6 +62,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (userModel != null) {
         emit(Authenticated(userModel));
       } else {
+        print("User profile not found ");
         emit(AuthError("User profile not found in Firestore"));
       }
     } catch (e) {
@@ -83,7 +99,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-
   Future<void> _onSignUpRequested(
     SignUpRequested event,
     Emitter<AuthState> emit,
@@ -117,23 +132,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           .set(userModel.toMap());
 
       emit(Authenticated(userModel));
-    } on FirebaseAuthException catch (e) {
-      // Handle Firebase-specific errors
-      String message;
-      switch (e.code) {
-        case 'email-already-in-use':
-          message = 'This email is already registered.';
-          break;
-        case 'invalid-email':
-          message = 'The email address is not valid.';
-          break;
-        case 'weak-password':
-          message = 'The password is too weak.';
-          break;
-        default:
-          message = 'Signup failed. ${e.message}';
-      }
-      emit(AuthError(message));
     } catch (e) {
       emit(AuthError('An unexpected error occurred: ${e.toString()}'));
     }

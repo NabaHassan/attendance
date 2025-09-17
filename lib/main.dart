@@ -1,19 +1,24 @@
 import 'package:attendance/bloc/attendance_bloc.dart';
 import 'package:attendance/bloc/auth__bloc.dart';
+import 'package:attendance/bloc/auth_event.dart';
 import 'package:attendance/bloc/auth_state.dart';
 import 'package:attendance/bloc/leave_bloc.dart';
 import 'package:attendance/consts/constants.dart';
+import 'package:attendance/models/user.dart';
 import 'package:attendance/repo/auth_repo.dart';
-import 'package:attendance/repo/leave.dart';
+import 'package:attendance/repo/leave_repo.dart';
+import 'package:attendance/screens/history_page.dart';
 import 'package:attendance/screens/leave_page.dart';
 import 'package:attendance/screens/login_screen.dart';
 import 'package:attendance/screens/signUp_screen.dart';
 import 'package:attendance/screens/attendance_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,12 +59,15 @@ class MyApp extends StatelessWidget {
           title: 'Attendance App',
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Constants.primaryDark),
+            textTheme: GoogleFonts.poppinsTextTheme(
+              Theme.of(context).textTheme,
+            ),
           ),
           home: const AuthCheck(),
           routes: {
             '/signUp': (context) => const SignupScreen(),
-            '/login': (context) => LoginScreen(),
-            '/homePage': (context) {
+            '/login': (context) => const LoginScreen(),
+            '/leave': (context) {
               final authState = context.read<AuthBloc>().state;
 
               if (authState is Authenticated) {
@@ -71,6 +79,9 @@ class MyApp extends StatelessWidget {
               }
             },
             '/attendance': (context) => const AttendanceScreen(),
+            '/history': (context) => const HistoryPage(),
+            
+
           },
         ),
       ),
@@ -86,24 +97,26 @@ class AuthCheck extends StatefulWidget {
 }
 
 class _AuthCheckState extends State<AuthCheck> {
-  bool userAvailable = false;
-  late SharedPreferences sharedPreferences;
+  bool? userAvailable;
 
   @override
   void initState() {
-    _getCurrentUser();
     super.initState();
+    _checkUser();
   }
 
-  void _getCurrentUser() async {
-    sharedPreferences = await SharedPreferences.getInstance();
-    try {
-      if (sharedPreferences.getString('employeeEmail') != null && sharedPreferences.getString('employeeId') != null) {
-        setState(() {
-          userAvailable = true;
-        });
-      }
-    } catch (e) {
+  Future<void> _checkUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final remember = prefs.getBool("rememberMe") ?? false;
+    final user = FirebaseAuth.instance.currentUser;
+    
+    if (remember && user != null) {
+      context.read<AuthBloc>().add(AppStarted());
+
+      setState(() {
+        userAvailable = true;
+      });
+    } else {
       setState(() {
         userAvailable = false;
       });
@@ -112,6 +125,16 @@ class _AuthCheckState extends State<AuthCheck> {
 
   @override
   Widget build(BuildContext context) {
-    return userAvailable ? const AttendanceScreen() : LoginScreen();
+    if (userAvailable == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // ✅ Use BlocBuilder so UI reacts to AuthBloc state
+    if (userAvailable == true) {
+      // If we already know the user is logged in, directly show Attendance
+      return const AttendanceScreen();
+    } else {
+      return const LoginScreen();
+    }
   }
 }

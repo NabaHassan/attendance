@@ -3,18 +3,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 
 class AuthRepository {
   final FirebaseAuth _firebaseAuth;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  late SharedPreferences sharedPreferences;
+
 
   AuthRepository({FirebaseAuth? firebaseAuth})
     : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
-final GoogleSignIn googleSignIn = GoogleSignIn();
-    
+  final GoogleSignIn googleSignIn = GoogleSignIn();
 
   // login
   Future<User?> signIn({
@@ -27,14 +24,19 @@ final GoogleSignIn googleSignIn = GoogleSignIn();
         password: password,
       );
       return credential.user;
-    } catch (e) {
-      return null;
+    } on FirebaseAuthException catch (e) {
+      throw Exception(e.message);
     }
   }
 
 
+  // Check if user is already logged in (Remember Me effect)
+  User? getCurrentUser() {
+    return _firebaseAuth.currentUser; // null if not logged in
+  }
 
-//method to signin using google 
+
+  //method to signin using google
   Future<User?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleSignInAccount = await googleSignIn
@@ -58,14 +60,6 @@ final GoogleSignIn googleSignIn = GoogleSignIn();
     }
   }
 
-
-  
-
-
-
-
-
-
   // logout
   Future<void> signOut() async {
     try {
@@ -80,7 +74,6 @@ final GoogleSignIn googleSignIn = GoogleSignIn();
       return null;
     }
   }
-
 
   // register
   Future<User?> signUp({
@@ -110,10 +103,6 @@ final GoogleSignIn googleSignIn = GoogleSignIn();
 
         await _firestore.collection('users').doc(user.uid).set(data);
 
-        // Save locally
-        sharedPreferences = await SharedPreferences.getInstance();
-        await sharedPreferences.setString('employeeId', user.uid);
-
         // Send verification email
         if (!user.emailVerified) {
           await user.sendEmailVerification();
@@ -130,13 +119,11 @@ final GoogleSignIn googleSignIn = GoogleSignIn();
     }
   }
 
-
   Future<bool> isEmailVerified() async {
     User? user = FirebaseAuth.instance.currentUser;
     await user?.reload(); // refresh user state
     return user?.emailVerified ?? false;
   }
-
 
   /// ✅ New Method: Fetch user profile from Firestore
   Future<UserModel?> getUserModel(String uid) async {
@@ -150,6 +137,7 @@ final GoogleSignIn googleSignIn = GoogleSignIn();
       return null;
     }
   }
+
   // Async version: refreshes current user and returns UID
   Future<String?> fetchCurrentEmployeeId() async {
     final user = _firebaseAuth.currentUser;
@@ -159,7 +147,6 @@ final GoogleSignIn googleSignIn = GoogleSignIn();
     }
     return null;
   }
-
 
   // Store attendance
   // Store attendance (check-in / check-out)
@@ -210,6 +197,7 @@ final GoogleSignIn googleSignIn = GoogleSignIn();
     ) {
       final data = snapshot.data();
       if (data == null) return null;
+      print("data:" + data.toString());
       return data['attendance'] ?? {};
     });
   }

@@ -1,8 +1,8 @@
-import 'package:attendance/repo/leave.dart';
+import 'package:attendance/repo/leave_repo.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 
-// EVENTS
+/// EVENTS
 abstract class LeaveEvent extends Equatable {
   const LeaveEvent();
   @override
@@ -25,9 +25,17 @@ class LeaveDescriptionChanged extends LeaveEvent {
   List<Object?> get props => [description];
 }
 
-class LeaveDateChanged extends LeaveEvent {
+class LeaveToDateChanged extends LeaveEvent {
   final DateTime date;
-  const LeaveDateChanged(this.date);
+  const LeaveToDateChanged(this.date);
+
+  @override
+  List<Object?> get props => [date];
+}
+
+class LeaveFromDateChanged extends LeaveEvent {
+  final DateTime date;
+  const LeaveFromDateChanged(this.date);
 
   @override
   List<Object?> get props => [date];
@@ -41,11 +49,12 @@ class SubmitLeave extends LeaveEvent {
   List<Object?> get props => [userId];
 }
 
-// STATES
+/// STATES
 class LeaveState extends Equatable {
   final String title;
   final String description;
-  final DateTime? date;
+  final DateTime? toDate;
+  final DateTime? fromDate;
   final bool isSubmitting;
   final bool isSuccess;
   final String? errorMessage;
@@ -54,7 +63,8 @@ class LeaveState extends Equatable {
   const LeaveState({
     this.title = '',
     this.description = '',
-    this.date,
+    this.toDate,
+    this.fromDate,
     this.isSubmitting = false,
     this.isSuccess = false,
     this.errorMessage,
@@ -64,7 +74,8 @@ class LeaveState extends Equatable {
   LeaveState copyWith({
     String? title,
     String? description,
-    DateTime? date,
+    DateTime? toDate,
+    DateTime? fromDate,
     bool? isSubmitting,
     bool? isSuccess,
     String? errorMessage,
@@ -73,12 +84,12 @@ class LeaveState extends Equatable {
     return LeaveState(
       title: title ?? this.title,
       description: description ?? this.description,
-      date: date ?? this.date,
+      toDate: toDate ?? this.toDate,
+      fromDate: fromDate ?? this.fromDate,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       isSuccess: isSuccess ?? this.isSuccess,
       isFailure: isFailure ?? this.isFailure,
-
-      errorMessage: errorMessage,
+      errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 
@@ -86,17 +97,16 @@ class LeaveState extends Equatable {
   List<Object?> get props => [
     title,
     description,
-    date,
+    toDate,
+    fromDate,
     isSubmitting,
     isSuccess,
     isFailure,
-
     errorMessage,
   ];
 }
 
-// BLOC
-
+/// BLOC
 class LeaveBloc extends Bloc<LeaveEvent, LeaveState> {
   final LeaveRepository leaveRepository;
 
@@ -109,8 +119,12 @@ class LeaveBloc extends Bloc<LeaveEvent, LeaveState> {
       emit(state.copyWith(description: event.description, isSuccess: false));
     });
 
-    on<LeaveDateChanged>((event, emit) {
-      emit(state.copyWith(date: event.date, isSuccess: false));
+    on<LeaveFromDateChanged>((event, emit) {
+      emit(state.copyWith(fromDate: event.date, isSuccess: false));
+    });
+
+    on<LeaveToDateChanged>((event, emit) {
+      emit(state.copyWith(toDate: event.date, isSuccess: false));
     });
 
     on<SubmitLeave>(_onSubmitLeave);
@@ -134,7 +148,8 @@ class LeaveBloc extends Bloc<LeaveEvent, LeaveState> {
         userId: event.userId,
         title: state.title,
         description: state.description,
-        date: state.date,
+        fromDate: state.fromDate,
+        toDate: state.toDate,
       );
 
       emit(
