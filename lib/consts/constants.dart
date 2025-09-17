@@ -5,6 +5,7 @@ class Constants {
   static const Color primary = Color(0xFF0A73B7);
   static const Color primaryLight = Color(0xFF4EA7E6);
   static const Color primaryDark = Color(0xFF005A9C);
+  static const Color secondaryText = Color(0xFFBDBDBD);
 
   // Secondary (positive/attendance)
   static const Color secondary = Color(0xFF2EA36A);
@@ -16,6 +17,10 @@ class Constants {
   static const Color surface = Color(0xFFFFFFFF);
   static const Color muted = Color(0xFF6B7280);
   static const Color border = Color(0xFFE6EEF6);
+  static const List<BoxShadow> boxShadow = [
+    BoxShadow(color: muted),
+    BoxShadow(color: Colors.grey),
+  ];
 
   // Semantic
   static const Color success = Color(0xFF2E7D32);
